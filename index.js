@@ -11,33 +11,42 @@ export default async ({ req, res, log, error }) => {
     const lineItems = await stripe.paymentLinks.listLineItems(paymentId)
     log(lineItems)
 
-    const charges = await stripe.charges.list({
+    const sessions = await stripe.checkout.sessions.list({
       payment_link: paymentLink.id,
     })
-    log(charges)
+    log(sessions)
 
     let successfulCharge = null
     let paidOn = null
 
-    successfulCharge = charges.data.find(
-      (charge) => charge.status === "succeeded"
-    )
+    for (const session of sessions.data) {
+      if (session.payment_status === "paid") {
+        const charges = await stripe.charges.list({
+          payment_intent: session.payment_intent,
+        })
+        log(charges)
 
-    if (successfulCharge) {
-      paidOn = new Date(successfulCharge.created * 1000).toISOString()
+        successfulCharge = charges.data.find(
+          (charge) => charge.status === "succeeded"
+        )
+
+        if (successfulCharge) {
+          paidOn = new Date(successfulCharge.created * 1000).toISOString()
+          break
+        }
+      }
     }
 
     const itemPrices = lineItems.data.map((item) => ({
+      description: item.description,
       price: item.price.unit_amount,
       currency: item.price.currency,
-      quantity: item.quantity,
     }))
 
     const response = {
       ...paymentLink,
       paid: !!successfulCharge,
       paidOn,
-      charge: successfulCharge,
       itemPrices,
     }
 
