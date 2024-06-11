@@ -6,44 +6,44 @@ export default async ({ req, res, log, error }) => {
   try {
     const paymentId = req.body
     const paymentLink = await stripe.paymentLinks.retrieve(paymentId)
-    const sessions = await stripe.checkout.sessions.list({
+    log(paymentLink)
+
+    const lineItems = await stripe.paymentLinks.listLineItems(paymentId)
+    log(lineItems)
+
+    const charges = await stripe.charges.list({
       payment_link: paymentLink.id,
     })
-
-    log(paymentId)
-    log(sessions)
+    log(charges)
 
     let successfulCharge = null
     let paidOn = null
 
-    for (const session of sessions.data) {
-      if (session.payment_status === "paid") {
-        const charges = await stripe.charges.list({
-          payment_intent: session.payment_intent,
-        })
+    successfulCharge = charges.data.find(
+      (charge) => charge.status === "succeeded"
+    )
 
-        log(charges)
-
-        successfulCharge = charges.data.find(
-          (charge) => charge.status === "succeeded"
-        )
-        if (successfulCharge) {
-          paidOn = new Date(successfulCharge.created * 1000).toISOString()
-          break
-        }
-      }
+    if (successfulCharge) {
+      paidOn = new Date(successfulCharge.created * 1000).toISOString()
     }
+
+    const itemPrices = lineItems.data.map((item) => ({
+      price: item.price.unit_amount,
+      currency: item.price.currency,
+      quantity: item.quantity,
+    }))
 
     const response = {
       ...paymentLink,
       paid: !!successfulCharge,
       paidOn,
       charge: successfulCharge,
+      itemPrices,
     }
 
     return res.json(response)
   } catch (err) {
     error("Error fetching data: ", err.message)
-    return res.empty()
+    return res.status(500).json({ error: "Internal Server Error" })
   }
 }
