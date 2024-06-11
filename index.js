@@ -19,15 +19,12 @@ export default async ({ req, res, log, error }) => {
       (charge) => charge.status === "succeeded"
     )
 
-    if (successfulCharge) {
-      return res.json({
-        status: "paid",
-      })
-    } else {
-      return res.json({
-        status: "unpaid",
-      })
+    const response = {
+      ...paymentLink,
+      paid: !!successfulCharge,
     }
+
+    return res.json(response)
   } catch (err) {
     error("Error fetching data: ", err.message)
     return res.empty()
