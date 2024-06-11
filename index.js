@@ -6,22 +6,29 @@ export default async ({ req, res, log, error }) => {
   try {
     const paymentId = req.body
     const paymentLink = await stripe.paymentLinks.retrieve(paymentId)
-
-    log(paymentLink)
-
-    const charges = await stripe.charges.list({
-      payment_intent: paymentLink.payment_intent,
+    const sessions = await stripe.checkout.sessions.list({
+      payment_link: paymentLink.id,
     })
 
-    log(charges)
-
-    const successfulCharge = charges.data.find(
-      (charge) => charge.status === "succeeded"
-    )
+    let successfulCharge = null
     let paidOn = null
 
-    if (successfulCharge) {
-      paidOn = new Date(successfulCharge.created * 1000).toISOString()
+    for (const session of sessions.data) {
+      if (session.payment_status === "paid") {
+        const charges = await stripe.charges.list({
+          payment_intent: session.payment_intent,
+        })
+
+        log(charges)
+
+        successfulCharge = charges.data.find(
+          (charge) => charge.status === "succeeded"
+        )
+        if (successfulCharge) {
+          paidOn = new Date(successfulCharge.created * 1000).toISOString()
+          break
+        }
+      }
     }
 
     const response = {
