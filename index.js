@@ -44,6 +44,6 @@ export default async ({ req, res, log, error }) => {
     return res.json(response)
   } catch (err) {
     error("Error fetching data: ", err.message)
-    return res.status(500).json({ error: "Internal Server Error" })
+    return res.empty()
   }
 }
