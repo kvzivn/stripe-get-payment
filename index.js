@@ -18,10 +18,16 @@ export default async ({ req, res, log, error }) => {
     const successfulCharge = charges.data.find(
       (charge) => charge.status === "succeeded"
     )
+    let paidOn = null
+
+    if (successfulCharge) {
+      paidOn = new Date(successfulCharge.created * 1000).toISOString()
+    }
 
     const response = {
       ...paymentLink,
       paid: !!successfulCharge,
+      paidOn,
     }
 
     return res.json(response)
