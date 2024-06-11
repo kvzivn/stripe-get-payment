@@ -28,6 +28,7 @@ export default async ({ req, res, log, error }) => {
       ...paymentLink,
       paid: !!successfulCharge,
       paidOn,
+      charge: successfulCharge,
     }
 
     return res.json(response)
