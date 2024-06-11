@@ -10,6 +10,9 @@ export default async ({ req, res, log, error }) => {
       payment_link: paymentLink.id,
     })
 
+    log(paymentId)
+    log(sessions)
+
     let successfulCharge = null
     let paidOn = null
 
